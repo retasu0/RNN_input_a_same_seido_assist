@@ -219,6 +219,24 @@ class DeepIRTModel(object):
 
             # Prediction
             pred_z_value = 3.0 * student_ability - question_difficulty - skill_difficulty
+            if "RNN" in self.args.message:
+                rnn_hidden_size = 128
+                self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=rnn_hidden_size)
+
+                rnn_cell = tf.contrib.rnn.DropoutWrapper(
+                    self.rnn_cell, output_keep_prob=0.95)
+
+                # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+                state = rnn_cell.zero_state(self.args.batch_size, tf.float32)
+
+                self.weight = tf.Variable(tf.random_normal([rnn_hidden_size, 1]))
+                self.bias = tf.Variable(tf.random_normal([1]))
+
+                # output, state = self.rnn_cell(tmp, state)
+                output, state = rnn_cell(q, state)
+
+                pred_z_value + output
+
             pred_raw = tf.sigmoid(pred_z_value)
             pred_value_list.append(pred_raw)
             pred_z_values.append(pred_z_value)

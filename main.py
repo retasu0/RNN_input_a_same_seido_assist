@@ -62,6 +62,7 @@ parser.add_argument('--rounds', type=int, default=None)
 parser.add_argument('--num_pattern', type=int, default=None)
 
 parser.add_argument('--gpu_num', type=str, default="1,0")
+parser.add_argument('--message', type=str, default=None)
 
 _args = parser.parse_args()
 args = ModelConfigFactory.create_model_config(_args)
