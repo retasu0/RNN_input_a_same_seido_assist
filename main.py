@@ -13,6 +13,16 @@ from run_skill import run_model_skill
 from utils import getLogger
 from configs import ModelConfigFactory
 # Code reused from https://github.com/ckyeungac/DeepIRT.git
+
+import warnings
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=Warning)
+tf.get_logger().setLevel('INFO')
+# tf.autograph.set_verbosity(0)
+tf.get_logger().setLevel(logging.ERROR)
+
 # set logger
 logger = getLogger('Deep-IRT-model-HN')
 
@@ -24,7 +34,7 @@ parser.add_argument('--dataset', default='assist2009_akt', )
 parser.add_argument('--mode', type=str, default='both')
 parser.add_argument('--save', type=bool, default=True)
 parser.add_argument('--cpu', type=bool, default=False)
-parser.add_argument('--n_epochs', type=int, default=None)
+parser.add_argument('--n_epochs', type=int, default=50)
 parser.add_argument('--batch_size', type=int, default=None)
 parser.add_argument('--train', type=bool, default=None)
 parser.add_argument('--show', type=bool, default=None)
@@ -50,6 +60,8 @@ parser.add_argument('--delta_1', type=float, default=None)
 parser.add_argument('--delta_2', type=float, default=None)
 parser.add_argument('--rounds', type=int, default=None)
 parser.add_argument('--num_pattern', type=int, default=None)
+
+parser.add_argument('--gpu_num', type=str, default="1,0")
 
 _args = parser.parse_args()
 args = ModelConfigFactory.create_model_config(_args)
@@ -270,13 +282,18 @@ def train_skill(model, train_q_data, train_qa_data, valid_q_data, valid_qa_data,
 
 def cross_validation():
     tf.set_random_seed(1234)
-    config = tf.ConfigProto()
+    config = tf.ConfigProto(
+        gpu_options=tf.GPUOptions(
+            visible_device_list=args.gpu_num,
+            allow_growth=True
+        )
+    )
     config.gpu_options.allow_growth = True
     if args.cpu:
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     aucs, accs, losses, f1_scores1, f1_scores2, pre1s, pre2s, rec1s, rec2s = list(), list(), list(), list(), list(), list(), list(), list(), list()
-    for i in range(5):
+    for i in range(1):
         tf.reset_default_graph()
         logger.info("Cross Validation {}".format(i + 1))
         result_csv_path = os.path.join(args.result_log_dir, 'fold-{}-result'.format(i + 1) + '.csv')
