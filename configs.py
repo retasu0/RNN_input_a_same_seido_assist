@@ -21,6 +21,16 @@ class ModelConfigFactory():
             return StaticsaktConfig(args).get_args()
         elif args.dataset == 'junyi':
             return junyi_Config(args).get_args()
+        elif args.dataset == 'kdd_skill_item':
+            return KDD_skill_item_Config(args).get_args()
+        elif args.dataset == 'statics_skill_item':
+            return Statics_skill_item_Config(args).get_args()
+        elif args.dataset == 'sundai_skill_item':
+            return Sundai_skill_item_Config(args).get_args()
+        elif args.dataset == 'english_skill_item':
+            return English_skill_item_Config(args).get_args()
+        elif args.dataset == 'math_skill_item':
+            return Math_skill_item_Config(args).get_args()
         else:
             raise ValueError("The '{}' is not available".format(args.dataset))
 
@@ -366,3 +376,183 @@ class StaticsaktConfig(ModelConfig):
         return default_setting
 
 
+class KDD_skill_item_Config(ModelConfig):
+    def get_default_setting(self):
+        default_setting = {
+            # training setting
+            'mode':'both',
+            'n_epochs': 50,
+            'batch_size': 32,
+            'train': True,
+            'show': True,
+            'learning_rate': 0.003,
+            'max_grad_norm': 10.0,
+            'use_ogive_model': False,
+            # dataset param
+            'seq_len': 200,
+            'n_questions': 551,
+            'n_skills': 74,
+            # student_num 821
+            'data_dir': './data/KDD_skill_item',
+            'data_name': 'kdd_skill_item',
+            # DKVMN param
+            'memory_size': 50,
+            'key_memory_state_dim': 50,
+            'value_memory_state_dim': 100,
+            'summary_vector_output_dim': 50,
+            # hyper-parameter of hyper-network and number of pattern
+            'delta_1': 1.5,
+            'delta_2': 1.5,
+            'rounds': 2,
+            'num_pattern': 1,
+            # parameter for the SA Network and KCD network
+            'student_ability_layer_structure': None,
+            'question_difficulty_layer_structure': None,
+            'discimination_power_layer_structure': None
+        }
+        return default_setting
+
+class Statics_skill_item_Config(ModelConfig):
+    def get_default_setting(self):
+        default_setting = {
+            # training setting
+            'mode':'both',
+            'n_epochs': 10,
+            'batch_size': 32,
+            'train': True,
+            'show': True,
+            'learning_rate': 0.003,
+            'max_grad_norm': 10.0,
+            'use_ogive_model': False,
+            # dataset param
+            'seq_len': 200,
+            'n_questions': 1208,
+            # student_num 1050
+            'n_skills': 98,
+            'data_dir': './data/STATICS_skill_item',
+            'data_name': 'statics_skill_item',
+            # DKVMN param
+            'memory_size': 50,
+            'key_memory_state_dim': 50,
+            'value_memory_state_dim': 100,
+            'summary_vector_output_dim': 50,
+            # hyper-parameter of hyper-network and number of pattern
+            'delta_1': 1.5,
+            'delta_2': 1.5,
+            'rounds': 2,
+            'num_pattern': 1,
+            # parameter for the SA Network and KCD network
+            'student_ability_layer_structure': None,
+            'question_difficulty_layer_structure': None,
+            'discimination_power_layer_structure': None
+        }
+        return default_setting
+
+class Sundai_skill_item_Config(ModelConfig):
+    def get_default_setting(self):
+        default_setting = {
+            # training setting
+            'mode':'both',
+            'n_epochs': 50,
+            'batch_size': 32,
+            'train': True,
+            'show': True,
+            'learning_rate': 0.003,
+            'max_grad_norm': 10.0,
+            'use_ogive_model': False,
+            # dataset param
+            'seq_len': 200,
+            'n_questions': 190,
+            'n_skills': 1,
+            # student_num 1204
+            'data_dir': './data/sundai_skill_item',
+            'data_name': 'sundai_skill_item',
+            # DKVMN param
+            'memory_size': 50,
+            'key_memory_state_dim': 50,
+            'value_memory_state_dim': 100,
+            'summary_vector_output_dim': 50,
+            # hyper-parameter of hyper-network and number of pattern
+            'delta_1': 1.5,
+            'delta_2': 1.5,
+            'rounds': 2,
+            'num_pattern': 1,
+            # parameter for the SA Network and KCD network
+            'student_ability_layer_structure': None,
+            'question_difficulty_layer_structure': None,
+            'discimination_power_layer_structure': None
+        }
+        return default_setting
+
+
+class English_skill_item_Config(ModelConfig):
+    def get_default_setting(self):
+        default_setting = {
+            # training setting
+            'mode':'both',
+            'n_epochs': 50,
+            'batch_size': 32,
+            'train': True,
+            'show': True,
+            'learning_rate': 0.003,
+            'max_grad_norm': 10.0,
+            'use_ogive_model': False,
+            # dataset param
+            'seq_len': 200,
+            'n_questions': 4072,
+            'n_skills': 115,
+            # student_num 46787
+            'data_dir': './data/english',
+            'data_name': 'english',
+            # DKVMN param
+            'memory_size': 50,
+            'key_memory_state_dim': 50,
+            'value_memory_state_dim': 100,
+            'summary_vector_output_dim': 50,
+            # hyper-parameter of hyper-network and number of pattern
+            'delta_1': 1.5,
+            'delta_2': 1.5,
+            'rounds': 2,
+            'num_pattern': 1,
+            # parameter for the SA Network and KCD network
+            'student_ability_layer_structure': None,
+            'question_difficulty_layer_structure': None,
+            'discimination_power_layer_structure': None
+        }
+        return default_setting
+
+class Math_skill_item_Config(ModelConfig):
+    def get_default_setting(self):
+        default_setting = {
+            # training setting
+            'mode':'both',
+            'n_epochs': 50,
+            'batch_size': 32,
+            'train': True,
+            'show': True,
+            'learning_rate': 0.003,
+            'max_grad_norm': 10.0,
+            'use_ogive_model': False,
+            # dataset param
+            'seq_len': 200,
+            'n_questions': 5274,
+            'n_skills': 128,
+            # student_num 65597
+            'data_dir': './data/math',
+            'data_name': 'math',
+            # DKVMN param
+            'memory_size': 50,
+            'key_memory_state_dim': 50,
+            'value_memory_state_dim': 100,
+            'summary_vector_output_dim': 50,
+            # hyper-parameter of hyper-network and number of pattern
+            'delta_1': 1.5,
+            'delta_2': 1.5,
+            'rounds': 2,
+            'num_pattern': 1,
+            # parameter for the SA Network and KCD network
+            'student_ability_layer_structure': None,
+            'question_difficulty_layer_structure': None,
+            'discimination_power_layer_structure': None
+        }
+        return default_setting

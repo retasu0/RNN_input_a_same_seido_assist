@@ -62,7 +62,8 @@ parser.add_argument('--rounds', type=int, default=None)
 parser.add_argument('--num_pattern', type=int, default=None)
 
 parser.add_argument('--gpu_num', type=str, default="1,0")
-parser.add_argument('--message', type=str, default=None)
+parser.add_argument('--retasu_message', type=str, default="")
+parser.add_argument('--AT', type=bool, default=False)
 
 _args = parser.parse_args()
 args = ModelConfigFactory.create_model_config(_args)
@@ -91,13 +92,13 @@ def train(model, train_q_data, train_s_data, train_qa_data, valid_q_data, valid_
         )
         f.write(result_msg)
     for epoch in range(args.n_epochs):
-        train_loss, train_accuracy, train_auc, train_f1_score, train_ability, train_difficult, train_skill_difficult, train_Diff, train_precision, train_recall, train_label_batch, train_all_pred, all_ability_train, pred_list_train, all_difficulties_train, all_skill_difficulties_train = run_model(
+        train_loss, train_accuracy, train_auc, train_f1_score, train_ability, train_difficult, train_skill_difficult, train_Diff, train_precision, train_recall, train_label_batch, train_all_pred, all_ability_train, pred_list_train, all_difficulties_train, all_skill_difficulties_train,all_rmm_output_list = run_model(
             model, args, train_s_data, train_q_data, train_qa_data, mode='train'
         )
-        valid_loss, valid_accuracy, valid_auc, valid_f1_score, valid_ability, valid_difficult, valid_skill_difficult, valid_Diff, valid_precision, valid_recall, valid_label_batch, valid_all_pred, all_ability_valid, pred_list_valid, all_difficulties_valid, all_skill_difficulties_valid = run_model(
+        valid_loss, valid_accuracy, valid_auc, valid_f1_score, valid_ability, valid_difficult, valid_skill_difficult, valid_Diff, valid_precision, valid_recall, valid_label_batch, valid_all_pred, all_ability_valid, pred_list_valid, all_difficulties_valid, all_skill_difficulties_valid,all_rmm_output_list = run_model(
             model, args, valid_s_data, valid_q_data, valid_qa_data, mode='valid'
         )
-        test_loss, test_accuracy, test_auc, test_f1_score, test_ability, test_difficult, test_skill_difficult, test_Diff, test_precision, test_recall, test_label_batch, test_all_pred, all_ability_test, pred_list_test, all_difficulties_test, all_skill_difficulties_test = run_model(
+        test_loss, test_accuracy, test_auc, test_f1_score, test_ability, test_difficult, test_skill_difficult, test_Diff, test_precision, test_recall, test_label_batch, test_all_pred, all_ability_test, pred_list_test, all_difficulties_test, all_skill_difficulties_test,all_rmm_output_list = run_model(
             model, args, test_s_data, test_q_data, test_qa_data, mode='valid'
         )
 
@@ -178,7 +179,7 @@ def train(model, train_q_data, train_s_data, train_qa_data, valid_q_data, valid_
     logger.info(msg)
     return best_auc, best_acc, best_loss, best_f1_score[0], best_f1_score[1], ability, difficult, skill_difficult, \
            best_pre[0], best_pre[1], best_rec[0], best_rec[
-               1], all_ability, all_pred, all_difficulties, all_skill_difficulties
+               1], all_ability, all_pred, all_difficulties, all_skill_difficulties,all_rmm_output_list
 
 
 def train_skill(model, train_q_data, train_qa_data, valid_q_data, valid_qa_data, test_q_data, test_qa_data,
@@ -294,7 +295,7 @@ def cross_validation():
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     aucs, accs, losses, f1_scores1, f1_scores2, pre1s, pre2s, rec1s, rec2s = list(), list(), list(), list(), list(), list(), list(), list(), list()
-    for i in range(1):
+    for i in range(5):
         tf.reset_default_graph()
         logger.info("Cross Validation {}".format(i + 1))
         result_csv_path = os.path.join(args.result_log_dir, 'fold-{}-result'.format(i + 1) + '.csv')
@@ -332,7 +333,7 @@ def cross_validation():
                     valid_q_data, valid_s_data, valid_qa_data = data_loader.load_data(valid_data_path, mode='valid')
                     test_q_data, test_s_data, test_qa_data = data_loader.load_data(test_data_path, mode='valid')
 
-                    auc, acc, loss, f1_score1, f1_score2, ability, difficult, skill_difficult, pre1, pre2, rec1, rec2, all_ability, all_pred, all_difficulties, all_skill_difficulties = train(
+                    auc, acc, loss, f1_score1, f1_score2, ability, difficult, skill_difficult, pre1, pre2, rec1, rec2, all_ability, all_pred, all_difficulties, all_skill_difficulties,all_rmm_output_list = train(
                         model,
                         train_q_data, train_s_data, train_qa_data,
                         valid_q_data, valid_s_data, valid_qa_data,
@@ -345,24 +346,32 @@ def cross_validation():
                 all_pred = np.asarray(all_pred).reshape([-1, args.seq_len])
                 all_difficulties = np.asarray(all_difficulties).reshape([-1, args.seq_len])
                 all_skill_difficulties = np.asarray(all_skill_difficulties).reshape([-1, args.seq_len])
+                all_rmm_output_list = np.asarray(all_rmm_output_list).reshape([-1, args.seq_len])
                 ability_csv_path = os.path.join(args.result_log_dir, '{}-ability'.format(args.data_name) + '.csv')
                 pred_csv_path = os.path.join(args.result_log_dir, '{}-pred'.format(args.data_name) + '.csv')
                 difficulty_csv_path = os.path.join(args.result_log_dir, '{}-difficulty'.format(args.data_name) + '.csv')
                 skill_difficulty_csv_path = os.path.join(args.result_log_dir, '{}-skill_difficulty'.format(args.data_name) + '.csv')
+                all_rmm_output_csv_path = os.path.join(args.result_log_dir, '{}-rmm_output'.format(args.data_name) + '.csv')
 
                 # write the explanatory parameters to files
-                with open(ability_csv_path, 'a') as f:
+                with open(ability_csv_path, 'a',newline="") as f:
                     writer = csv.writer(f)
                     writer.writerows(all_ability)
-                with open(pred_csv_path, 'a') as f:
+                with open(pred_csv_path, 'a',newline="") as f:
                     writer = csv.writer(f)
                     writer.writerows(all_pred)
-                with open(difficulty_csv_path, 'a') as f:
+                with open(difficulty_csv_path, 'a',newline="") as f:
                     writer = csv.writer(f)
                     writer.writerows(all_difficulties)
-                with open(skill_difficulty_csv_path, 'a') as f:
+                with open(skill_difficulty_csv_path, 'a',newline="") as f:
                     writer = csv.writer(f)
                     writer.writerows(all_skill_difficulties)
+                with open(all_rmm_output_csv_path, 'a',newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerows(all_rmm_output_list)
+
+
+
                 aucs.append(auc)
                 accs.append(acc)
                 losses.append(loss)
@@ -403,4 +412,5 @@ def cross_validation():
 
 
 if __name__ == '__main__':
+    #print("hihihi")
     cross_validation()

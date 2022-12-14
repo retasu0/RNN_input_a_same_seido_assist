@@ -43,6 +43,14 @@ class DeepIRTModel(object):
         self.q_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='q_data')
         self.qa_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='qa_data')
         self.label = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='label')
+        self.s_perturbation = tf.placeholder(tf.float32,
+                                             [self.args.batch_size, self.args.seq_len, self.args.key_memory_state_dim],
+                                             name='s_perturbation')  # , [self.args.batch_size, self.args.seq_len,self.args.key_memory_state_dim]
+        self.q_perturbation = tf.placeholder(tf.float32,
+                                             [self.args.batch_size, self.args.seq_len, self.args.key_memory_state_dim],
+                                             name='q_perturbation')
+        self.model_loss = tf.placeholder(tf.float32, name='model_loss')
+        self.flag = tf.placeholder(tf.int32, name='flag')
 
     def _influence(self):
         # Initialize Memory
@@ -100,8 +108,12 @@ class DeepIRTModel(object):
         self.qa_embed_matrix__ = qa_embed_matrix
         # Embedding to Shape (batch size, seq_len, memory_state_dim(d_k or d_v))
         logger.info("Initializing Embedding Lookup")
-        s_embed_data = tf.nn.embedding_lookup(s_embed_matrix, self.s_data)
-        q_embed_data = tf.nn.embedding_lookup(q_embed_matrix, self.q_data)
+        if self.args.AT:
+            s_embed_data = tf.nn.embedding_lookup(s_embed_matrix, self.s_data) + self.s_perturbation
+            q_embed_data = tf.nn.embedding_lookup(q_embed_matrix, self.q_data) + self.q_perturbation
+        else:
+            s_embed_data = tf.nn.embedding_lookup(s_embed_matrix, self.s_data)
+            q_embed_data = tf.nn.embedding_lookup(q_embed_matrix, self.q_data)
         qa_embed_data = tf.nn.embedding_lookup(qa_embed_matrix, self.qa_data)
         self.s_embed_data = s_embed_data
         self.q_embed_data = q_embed_data
@@ -129,8 +141,53 @@ class DeepIRTModel(object):
         skill_difficulties = list()
         pred_value_list = list()
         memory_matrix_pre_list = list()
+        rnn_output_list = list() # 提案の出力
         reuse_flag = False
         logger.info("Initializing Influence Procedure")
+
+        hidden_size = int(50)
+        """
+        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
+
+        self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
+
+        # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+        state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+        self.W_x = tf.Variable(tf.random_normal([hidden_size, 1]))
+        self.b_x = tf.Variable(tf.random_normal([1]))
+        """
+        #self.weight = tf.Variable(tf.random_normal([hidden_size, 1]))
+        #self.bias = tf.Variable(tf.random_normal([1]))
+
+        """
+        # batch_size, seq_len, memory_state_dimのs_embed_dataを入力できるRNNを作成
+        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
+        # RNNの実装
+        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
+        self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
+        state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+        """
+
+        """
+        # RNNを用意する 独自実装
+        # W_h W_q b_qの作成
+        self.W_h = tf.Variable(tf.random_normal([hidden_size, hidden_size]))
+        self.W_q = tf.Variable(tf.random_normal([self.args.key_memory_state_dim, hidden_size]))
+        self.b_q = tf.Variable(tf.random_normal([hidden_size]))
+
+        #出力用 W_o b_oの作成
+        self.W_o = tf.Variable(tf.random_normal([hidden_size, 1]))
+        self.b_o = tf.Variable(tf.random_normal([1]))
+
+        # h_0の作成
+        self.h_t = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size]))
+        """
+
+        # hidden_size×hidden_sizeの重み行列
+        self.h = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size],stddev=0.1))
+
+
+
         for i in range(self.args.seq_len):
             # To reuse linear vectors
             if i != 0:
@@ -190,7 +247,7 @@ class DeepIRTModel(object):
                 num_outputs=self.args.summary_vector_output_dim,
                 scope='QuestionDifficultyOutputLayer1',
                 reuse=reuse_flag,
-                activation_fn=tf.nn.tanh
+                activation_fn=tf.nn.tanh,
             )
 
             question_difficulty = layers.fully_connected(
@@ -219,27 +276,83 @@ class DeepIRTModel(object):
 
             # Prediction
             pred_z_value = 3.0 * student_ability - question_difficulty - skill_difficulty
-            if "RNN" in self.args.message:
-                rnn_hidden_size = 128
-                self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=rnn_hidden_size)
+            """
+            # output, state = self.rnn_cell(tmp, state)
+            # q,hを入力とし、Wq+Wh+bを計算する
+            zt = tf.matmul(q, self.W_x) + tf.matmul(self.h_t, self.W_h) + self.b_h
+            output = tf.matmul(zt, self.W_out) + self.b_out
+            # tanhを適用する
+            output = tf.nn.tanh(output)
+            # h_tを更新する
+            self.h_t = tf.matmul(zt, self.W_h_) + self.b_h_
 
-                rnn_cell = tf.contrib.rnn.DropoutWrapper(
-                    self.rnn_cell, output_keep_prob=0.95)
+            """
+            #output = tf.matmul(q, self.W_x) + self.b_x
+            """
+            # 独自実装RMM
+            self.h_t = tf.tanh(tf.matmul(q, self.W_q)+ tf.matmul(self.h_t, self.W_h) + self.b_q)
+            output = tf.tanh(tf.matmul(self.h_t, self.W_o) + self.b_o)
+            """
+            """
+            # rnn_cellにランダムな値を入力する
+            #output, state = self.rnn_cell(q, state)
+            output, state = self.rnn_cell(tf.random_normal([self.args.batch_size, 50]), state)
 
-                # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-                state = rnn_cell.zero_state(self.args.batch_size, tf.float32)
+            output = tf.matmul(q, self.W_x) + self.b_x
+            output = tf.nn.relu(output)
+            output = tf.sigmoid(output)
+            #output = tf.matmul(output, self.weight) + self.bias
+            """
+            """"""
+            self.h = layers.fully_connected(
+                inputs=tf.concat([q, self.h], axis=1),
+                num_outputs=50,
+                scope='RNN_hiddennode',
+                reuse=tf.AUTO_REUSE,
+                activation_fn=tf.nn.tanh,
+            )
+            # dropout
+            self.h = tf.nn.dropout(self.h, 0.9)
 
-                self.weight = tf.Variable(tf.random_normal([rnn_hidden_size, 1]))
-                self.bias = tf.Variable(tf.random_normal([1]))
+            output = layers.fully_connected(
+                inputs=self.h,
+                num_outputs=1,
+                scope='RNN_output',
+                reuse=tf.AUTO_REUSE,
+                activation_fn=tf.nn.elu
+            )
 
-                # output, state = self.rnn_cell(tmp, state)
-                output, state = rnn_cell(q, state)
 
-                pred_z_value + output
+            """
+            rnn_hidden_size = int(self.args.retasu_message.split(",")[1])
+            self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=rnn_hidden_size)
 
+            self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
+
+            # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+            state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
+
+            self.weight = tf.Variable(tf.random_normal([rnn_hidden_size, 1]))
+            self.bias = tf.Variable(tf.random_normal([1]))
+
+            # output, state = self.rnn_cell(tmp, state)
+            output, state = self.rnn_cell(q, state)
+
+            output = tf.matmul(output, self.weight) + self.bias
+            """
+
+
+
+
+
+
+
+            # output にweightとbiasをかけて、pred_z_valueに足す
+            pred_z_value = pred_z_value +output
             pred_raw = tf.sigmoid(pred_z_value)
             pred_value_list.append(pred_raw)
             pred_z_values.append(pred_z_value)
+            rnn_output_list.append(output)
             student_abilities.append(3.0 *tf.nn.tanh(student_ability))
             question_difficulties.append(tf.nn.tanh(question_difficulty))
             skill_difficulties.append(tf.nn.tanh(skill_difficulty))
@@ -262,6 +375,10 @@ class DeepIRTModel(object):
         )
         self.skill_difficulties = tf.reshape(
             tf.stack(skill_difficulties, axis=1),
+            [self.args.batch_size, self.args.seq_len]
+        )
+        self.rnn_output_list = tf.reshape(
+            tf.stack(rnn_output_list, axis=1),
             [self.args.batch_size, self.args.seq_len]
         )
 
@@ -316,15 +433,31 @@ class DeepIRTModel(object):
                 labels=filtered_label
             )
         )
+        if self.args.AT:
+            self.loss_pre = tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=filtered_logits,
+                labels=filtered_label
+            )
 
         self.loss = cross_entropy
 
+        if self.args.AT:
+            self.loss = self.loss + self.model_loss * 0.1
+
     def _create_optimizer(self):
         with tf.variable_scope('Optimizer'):
-            self.optimizer = tf.train.AdamOptimizer(learning_rate=self.args.learning_rate)
-            gvs = self.optimizer.compute_gradients(self.loss)
-            clipped_gvs = [(tf.clip_by_norm(grad, self.args.max_grad_norm), var) for grad, var in gvs]
-            self.train_op = self.optimizer.apply_gradients(clipped_gvs)
+            if self.args.AT:
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.args.learning_rate)
+                gvs = self.optimizer.compute_gradients(self.loss)
+                self.gridients = gvs
+                clipped_gvs = [(tf.clip_by_norm(grad, self.args.max_grad_norm), var) for grad, var in gvs]
+                self.clipped_gvs = clipped_gvs
+                self.train_op = self.optimizer.apply_gradients(clipped_gvs)
+            else:
+                self.optimizer = tf.train.AdamOptimizer(learning_rate=self.args.learning_rate)
+                gvs = self.optimizer.compute_gradients(self.loss)
+                clipped_gvs = [(tf.clip_by_norm(grad, self.args.max_grad_norm), var) for grad, var in gvs]
+                self.train_op = self.optimizer.apply_gradients(clipped_gvs)
 
     def _add_summary(self):
         tf.summary.scalar('Loss', self.loss)

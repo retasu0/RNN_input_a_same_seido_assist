@@ -6,7 +6,7 @@ from utils import getLogger
 from utils import ProgressBar
 # Code reused from https://github.com/ckyeungac/DeepIRT.git
 
-
+epsilon = 2
 def compute_auc(all_label, all_pred):
     return metrics.roc_auc_score(all_label, all_pred)
 
@@ -74,6 +74,7 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
     all_difficulties_list = list()
     all_pred_list = list()
     all_skill_difficulties_list = list()
+    all_rmm_output_list = list()
     for step in range(training_step):
         if args.show:
             bar.next()
@@ -92,22 +93,53 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
             model.s_data: s_data_batch,
             model.q_data: q_data_batch,
             model.qa_data: qa_data_batch,
-            model.label: label_batch
+            model.label: label_batch,
+            model.s_perturbation : np.zeros((args.batch_size,args.seq_len, args.key_memory_state_dim)),
+            model.q_perturbation : np.zeros((args.batch_size,args.seq_len, args.key_memory_state_dim)),
+            model.model_loss :np.zeros(1),
+            model.flag : 0
         }
         if mode == "train":
-            pred_, _, student_abilities_, question_difficulties_, skill_difficulties_, pred_list_ = model.sess.run(
-                [model.pred, model.train_op, model.student_abilities, model.question_difficulties,
-                 model.skill_difficulties, model.pred_value_list], feed_dict=feed_dict)
+            if args.AT:
+                pred_, s_embed_data, q_embed_data, gridients, model_loss = model.sess.run(
+                    [model.pred, model.s_embed_data, model.q_embed_data, model.clipped_gvs, model.loss],
+                    feed_dict=feed_dict)
+                # if step == 1:
+                #    print(pred_)
+
+                delta_s = epsilon * gridients[2][0].values / (np.sqrt(np.sum(gridients[2][0].values ** 2)) + 1e-8)
+                delta_p = epsilon * gridients[3][0].values / (np.sqrt(np.sum(gridients[3][0].values ** 2)) + 1e-8)
+
+                feed_dict = {
+                    model.s_data: s_data_batch,
+                    model.q_data: q_data_batch,
+                    model.qa_data: qa_data_batch,
+                    model.label: label_batch,
+                    model.s_perturbation: delta_s.reshape(args.batch_size, args.seq_len, args.key_memory_state_dim),
+                    model.q_perturbation: delta_p.reshape(args.batch_size, args.seq_len, args.key_memory_state_dim),
+                    model.model_loss: model_loss,
+                    model.flag: 1
+                }
+                pred_, _, student_abilities_, question_difficulties_, skill_difficulties_, pred_list_,rnn_output_list_ = model.sess.run(
+                    [model.pred, model.train_op, model.student_abilities, model.question_difficulties,
+                     model.skill_difficulties, model.pred_value_list,model.rnn_output_list], feed_dict=feed_dict)
+            else:
+
+
+                pred_, _, student_abilities_, question_difficulties_, skill_difficulties_, pred_list_,rnn_output_list_ = model.sess.run(
+                    [model.pred, model.train_op, model.student_abilities, model.question_difficulties,
+                     model.skill_difficulties, model.pred_value_list,model.rnn_output_list], feed_dict=feed_dict)
         else:
-            pred_, student_abilities_, question_difficulties_, skill_difficulties_, pred_list_ = model.sess.run(
+            pred_, student_abilities_, question_difficulties_, skill_difficulties_, pred_list_,rnn_output_list_ = model.sess.run(
                 [model.pred, model.student_abilities, model.question_difficulties, model.skill_difficulties,
-                 model.pred_value_list], feed_dict=feed_dict)
+                 model.pred_value_list,model.rnn_output_list], feed_dict=feed_dict)
 
         label_flat = np.asarray(label_batch).reshape((-1))
         pred_flat = np.asarray(pred_).reshape((-1))
         index_flat = np.flatnonzero(label_flat != -1.).tolist()
         all_student_abilities_list.append(student_abilities_)
         all_pred_list.append(pred_list_)
+        all_rmm_output_list.append(rnn_output_list_)
         all_difficulties_list.append(question_difficulties_)
         all_skill_difficulties_list.append(skill_difficulties_)
 
@@ -129,4 +161,4 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
 
     return loss, accuracy, auc, f1_score, student_abilities_, question_difficulties_, skill_difficulties_, Diff, \
            precision, recall, label_batch, all_pred, all_student_abilities_list, all_pred_list, all_difficulties_list, \
-           all_skill_difficulties_list
+           all_skill_difficulties_list,all_rmm_output_list
