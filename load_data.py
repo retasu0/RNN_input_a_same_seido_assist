@@ -16,6 +16,7 @@ class DataLoader():
         s_data = []
         q_item_data = []
         qa_data = []
+        rnn_input = []
         with open(path, 'r') as f:
             for line_idx, line in enumerate(f):
                 line = line.strip()
@@ -51,7 +52,7 @@ class DataLoader():
                             s_container = list()
                             q_item_container = list()
                             qa_container = list()
-                            s_true_container = list()
+                            rnn_input_container = list()
 
                             start_idx = k * self.seq_len
                             end_idx = min((k + 1) * self.seq_len, len(a_tag_list), len(s_tag_list),
@@ -61,15 +62,20 @@ class DataLoader():
                                 a_value = int(a_tag_list[i])  # either be 0 or 1
                                 s_value = int(s_tag_list[i])
                                 if 'assist2017_akt' in path:
-                                  qa_value = q_item_value + a_value * self.n_skills
+                                    qa_value = q_item_value + a_value * self.n_skills
+                                    rnn_input_value = s_value + a_value * self.n_questions
                                 else:
-                                  qa_value = s_value + a_value * self.n_skills
+                                    qa_value = s_value + a_value * self.n_skills
+                                    rnn_input_value = q_item_value + a_value * self.n_questions
                                 s_container.append(s_value)
                                 q_item_container.append(q_item_value)
                                 qa_container.append(qa_value)
+                                rnn_input_container.append(rnn_input_value)
                             s_data.append(s_container)
                             q_item_data.append(q_item_container)
                             qa_data.append(qa_container)
+                            rnn_input.append(rnn_input_container)
+
 
                     else:
                         continue
@@ -78,17 +84,20 @@ class DataLoader():
         s_data_array = np.zeros((len(s_data), self.seq_len))
         q_item_data_array = np.zeros((len(q_item_data), self.seq_len))
         qa_data_array = np.zeros((len(qa_data), self.seq_len))
+        rnn_input_array = np.zeros((len(rnn_input), self.seq_len))
         for i in range(len(q_item_data)):
             _s_data = s_data[i]
             _q_item_data = q_item_data[i]
             _qa_data = qa_data[i]
+            _rnn_input = rnn_input[i]
             s_data_array[i, :len(_s_data)] = _s_data
             q_item_data_array[i, :len(_q_item_data)] = _q_item_data
             qa_data_array[i, :len(_qa_data)] = _qa_data
+            rnn_input_array[i, :len(_rnn_input)] = _rnn_input
         if 'assist2017_akt' in path:
-          return s_data_array , q_item_data_array,qa_data_array
+          return s_data_array , q_item_data_array,qa_data_array,rnn_input_array
         else:
-          return q_item_data_array, s_data_array, qa_data_array
+          return q_item_data_array, s_data_array, qa_data_array, rnn_input_array
 
     # the dataloader for dataset with skill tag
     def load_data_skill(self, path):

@@ -76,7 +76,7 @@ for directory in [args.checkpoint_dir, args.result_log_dir, args.tensorboard_dir
 
 
 def train(model, train_q_data, train_s_data, train_qa_data, valid_q_data, valid_s_data, valid_qa_data, test_q_data,
-          test_s_data, test_qa_data, result_log_path, args):
+          test_s_data, test_qa_data,train_rnn_input, valid_rnn_input, test_rnn_input, result_log_path, args):
     best_loss = 1e6
     best_acc = 0.0
     best_auc = 0.0
@@ -93,13 +93,13 @@ def train(model, train_q_data, train_s_data, train_qa_data, valid_q_data, valid_
         f.write(result_msg)
     for epoch in range(args.n_epochs):
         train_loss, train_accuracy, train_auc, train_f1_score, train_ability, train_difficult, train_skill_difficult, train_Diff, train_precision, train_recall, train_label_batch, train_all_pred, all_ability_train, pred_list_train, all_difficulties_train, all_skill_difficulties_train,all_rmm_output_list = run_model(
-            model, args, train_s_data, train_q_data, train_qa_data, mode='train'
+            model, args, train_s_data, train_q_data, train_qa_data,train_rnn_input, mode='train'
         )
         valid_loss, valid_accuracy, valid_auc, valid_f1_score, valid_ability, valid_difficult, valid_skill_difficult, valid_Diff, valid_precision, valid_recall, valid_label_batch, valid_all_pred, all_ability_valid, pred_list_valid, all_difficulties_valid, all_skill_difficulties_valid,all_rmm_output_list = run_model(
-            model, args, valid_s_data, valid_q_data, valid_qa_data, mode='valid'
+            model, args, valid_s_data, valid_q_data, valid_qa_data,valid_rnn_input, mode='valid'
         )
         test_loss, test_accuracy, test_auc, test_f1_score, test_ability, test_difficult, test_skill_difficult, test_Diff, test_precision, test_recall, test_label_batch, test_all_pred, all_ability_test, pred_list_test, all_difficulties_test, all_skill_difficulties_test,all_rmm_output_list = run_model(
-            model, args, test_s_data, test_q_data, test_qa_data, mode='valid'
+            model, args, test_s_data, test_q_data, test_qa_data,test_rnn_input, mode='valid'
         )
 
         # add to log
@@ -329,15 +329,16 @@ def cross_validation():
                     )
                     all_skill_difficulties = all_difficulties
                 else:
-                    train_q_data, train_s_data, train_qa_data = data_loader.load_data(train_data_path, mode='train')
-                    valid_q_data, valid_s_data, valid_qa_data = data_loader.load_data(valid_data_path, mode='valid')
-                    test_q_data, test_s_data, test_qa_data = data_loader.load_data(test_data_path, mode='valid')
+                    train_q_data, train_s_data, train_qa_data,train_rnn_input = data_loader.load_data(train_data_path, mode='train')
+                    valid_q_data, valid_s_data, valid_qa_data,valid_rnn_input = data_loader.load_data(valid_data_path, mode='valid')
+                    test_q_data, test_s_data, test_qa_data,test_rnn_input = data_loader.load_data(test_data_path, mode='valid')
 
                     auc, acc, loss, f1_score1, f1_score2, ability, difficult, skill_difficult, pre1, pre2, rec1, rec2, all_ability, all_pred, all_difficulties, all_skill_difficulties,all_rmm_output_list = train(
                         model,
                         train_q_data, train_s_data, train_qa_data,
                         valid_q_data, valid_s_data, valid_qa_data,
                         test_q_data, test_s_data, test_qa_data,
+                        train_rnn_input, valid_rnn_input, test_rnn_input,
                         result_log_path=result_csv_path,
                         args=args
                     )

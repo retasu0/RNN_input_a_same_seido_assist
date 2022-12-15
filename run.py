@@ -45,7 +45,7 @@ def binaryEntropy(label, pred, mod="avg"):
         assert False
 
 
-def run_model(model, args, s_data, q_data, qa_data, mode):
+def run_model(model, args, s_data, q_data, qa_data,rnn_input, mode):
     """
     Run one epoch.
 
@@ -58,11 +58,13 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
         s_data_shuffled = s_data[shuffle_index]
         q_data_shuffled = q_data[shuffle_index]
         qa_data_shuffled = qa_data[shuffle_index]
+        rnn_input_shuffled = rnn_input[shuffle_index]
     # don't shuffle the data when validate and test the model
     else:
         s_data_shuffled = s_data
         q_data_shuffled = q_data
         qa_data_shuffled = qa_data
+        rnn_input_shuffled = rnn_input
 
     training_step = q_data.shape[0] // args.batch_size
     if args.show:
@@ -82,6 +84,7 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
         s_data_batch = s_data_shuffled[step * args.batch_size:(step + 1) * args.batch_size, :]
         q_data_batch = q_data_shuffled[step * args.batch_size:(step + 1) * args.batch_size, :]
         qa_data_batch = qa_data_shuffled[step * args.batch_size:(step + 1) * args.batch_size, :]
+        rnn_input_batch = rnn_input_shuffled[step * args.batch_size:(step + 1) * args.batch_size, :]
 
         # qa : exercise index + answer(0 or 1)*skill_number
         label = qa_data_batch[:, :]
@@ -93,6 +96,7 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
             model.s_data: s_data_batch,
             model.q_data: q_data_batch,
             model.qa_data: qa_data_batch,
+            model.rnn_input: rnn_input_batch,
             model.label: label_batch,
             model.s_perturbation : np.zeros((args.batch_size,args.seq_len, args.key_memory_state_dim)),
             model.q_perturbation : np.zeros((args.batch_size,args.seq_len, args.key_memory_state_dim)),
@@ -114,6 +118,7 @@ def run_model(model, args, s_data, q_data, qa_data, mode):
                     model.s_data: s_data_batch,
                     model.q_data: q_data_batch,
                     model.qa_data: qa_data_batch,
+                    model.rnn_input: rnn_input_batch,
                     model.label: label_batch,
                     model.s_perturbation: delta_s.reshape(args.batch_size, args.seq_len, args.key_memory_state_dim),
                     model.q_perturbation: delta_p.reshape(args.batch_size, args.seq_len, args.key_memory_state_dim),

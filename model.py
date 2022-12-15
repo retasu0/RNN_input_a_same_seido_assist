@@ -42,6 +42,7 @@ class DeepIRTModel(object):
         self.s_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='s_data')
         self.q_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='q_data')
         self.qa_data = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='qa_data')
+        self.rnn_input = tf.placeholder(tf.int32, [self.args.batch_size, self.args.seq_len], name='rnn_input')
         self.label = tf.placeholder(tf.float32, [self.args.batch_size, self.args.seq_len], name='label')
         self.s_perturbation = tf.placeholder(tf.float32,
                                              [self.args.batch_size, self.args.seq_len, self.args.key_memory_state_dim],
@@ -103,6 +104,10 @@ class DeepIRTModel(object):
                 'qa_embed', [2 * self.args.n_skills + 1, self.args.value_memory_state_dim],
                 initializer=tf.truncated_normal_initializer(stddev=0.1)
             )
+            rnn_input_embed_matrix = tf.get_variable(
+                'rnn_input_embed', [2*self.args.n_questions + 1, self.args.key_memory_state_dim],
+                initializer=tf.truncated_normal_initializer(stddev=0.1)
+            )
 
         self.q_embed_matrix__ = q_embed_matrix
         self.qa_embed_matrix__ = qa_embed_matrix
@@ -115,9 +120,11 @@ class DeepIRTModel(object):
             s_embed_data = tf.nn.embedding_lookup(s_embed_matrix, self.s_data)
             q_embed_data = tf.nn.embedding_lookup(q_embed_matrix, self.q_data)
         qa_embed_data = tf.nn.embedding_lookup(qa_embed_matrix, self.qa_data)
+        rnn_input_embed_data = tf.nn.embedding_lookup(rnn_input_embed_matrix, self.rnn_input)
         self.s_embed_data = s_embed_data
         self.q_embed_data = q_embed_data
         self.qa_embed_data = qa_embed_data
+        self.rnn_input_embed_data = rnn_input_embed_data
 
         logger.debug("Shape of q_embed_data: {}".format(q_embed_data.get_shape()))
         logger.debug("Shape of qa_embed_data: {}".format(qa_embed_data.get_shape()))
@@ -130,6 +137,9 @@ class DeepIRTModel(object):
         )
         sliced_qa_embed_data = tf.split(
             value=qa_embed_data, num_or_size_splits=self.args.seq_len, axis=1
+        )
+        sliced_rnn_input_embed_data = tf.split(
+            value=rnn_input_embed_data, num_or_size_splits=self.args.seq_len, axis=1
         )
 
         logger.debug("Shape of sliced_q_embed_data[0]: {}".format(sliced_q_embed_data[0].get_shape()))
@@ -210,6 +220,7 @@ class DeepIRTModel(object):
             s = tf.squeeze(sliced_s_embed_data[i], 1)
             q = tf.squeeze(sliced_q_embed_data[i], 1)
             qa = tf.squeeze(sliced_qa_embed_data[i], 1)
+            rnn_input = tf.squeeze(sliced_rnn_input_embed_data[i], 1)
             logger.debug("qeury vector q: {}".format(q))
             logger.debug("content vector qa: {}".format(qa))
 
@@ -308,20 +319,27 @@ class DeepIRTModel(object):
                 inputs=tf.concat([q, self.h], axis=1),
                 num_outputs=50,
                 scope='RNN_hiddennode',
-                reuse=tf.AUTO_REUSE,
+                reuse=reuse_flag,
                 activation_fn=tf.nn.tanh,
             )
             # dropout
-            self.h = tf.nn.dropout(self.h, 0.9)
+            # self.h = tf.nn.dropout(self.h, 0.9)
 
             output = layers.fully_connected(
                 inputs=self.h,
                 num_outputs=1,
                 scope='RNN_output',
-                reuse=tf.AUTO_REUSE,
+                reuse=reuse_flag,
                 activation_fn=tf.nn.elu
             )
 
+            self.h = layers.fully_connected(
+                inputs=tf.concat([rnn_input, self.h], axis=1),
+                num_outputs=50,
+                scope='RNN_hidden_next',
+                reuse=reuse_flag,
+                activation_fn=tf.nn.tanh,
+            )
 
             """
             rnn_hidden_size = int(self.args.retasu_message.split(",")[1])
