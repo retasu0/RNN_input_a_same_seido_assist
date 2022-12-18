@@ -295,7 +295,7 @@ def cross_validation():
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     aucs, accs, losses, f1_scores1, f1_scores2, pre1s, pre2s, rec1s, rec2s = list(), list(), list(), list(), list(), list(), list(), list(), list()
-    for i in range(5):
+    for i in range(1):
         tf.reset_default_graph()
         logger.info("Cross Validation {}".format(i + 1))
         result_csv_path = os.path.join(args.result_log_dir, 'fold-{}-result'.format(i + 1) + '.csv')
