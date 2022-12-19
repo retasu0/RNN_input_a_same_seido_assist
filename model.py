@@ -156,46 +156,23 @@ class DeepIRTModel(object):
         logger.info("Initializing Influence Procedure")
 
         hidden_size = int(50)
-        """
-        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
 
-        self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
 
-        # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-        state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-        self.W_x = tf.Variable(tf.random_normal([hidden_size, 1]))
-        self.b_x = tf.Variable(tf.random_normal([1]))
-        """
-        #self.weight = tf.Variable(tf.random_normal([hidden_size, 1]))
-        #self.bias = tf.Variable(tf.random_normal([1]))
-
-        """
-        # batch_size, seq_len, memory_state_dimのs_embed_dataを入力できるRNNを作成
-        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
-        # RNNの実装
-        self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=hidden_size)
-        self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
-        state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-        """
-
-        """
-        # RNNを用意する 独自実装
-        # W_h W_q b_qの作成
-        self.W_h = tf.Variable(tf.random_normal([hidden_size, hidden_size]))
-        self.W_q = tf.Variable(tf.random_normal([self.args.key_memory_state_dim, hidden_size]))
-        self.b_q = tf.Variable(tf.random_normal([hidden_size]))
-
-        #出力用 W_o b_oの作成
-        self.W_o = tf.Variable(tf.random_normal([hidden_size, 1]))
-        self.b_o = tf.Variable(tf.random_normal([1]))
-
-        # h_0の作成
-        self.h_t = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size]))
-        """
+        # 手作業で作ったバージョン
 
         # hidden_size×hidden_sizeの重み行列
         self.h = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size],stddev=0.1))
+        """
 
+        # W_cq,W_ch,b_c
+        self.W_cq = tf.Variable(tf.random_normal([hidden_size, hidden_size],stddev=0.1))
+        self.W_ch = tf.Variable(tf.random_normal([hidden_size, hidden_size],stddev=0.1))
+        self.b_c = tf.Variable(tf.random_normal([1, hidden_size],stddev=0.1))
+
+        self.W_hh = tf.Variable(tf.random_normal([hidden_size, hidden_size],stddev=0.1))
+        self.W_hi = tf.Variable(tf.random_normal([hidden_size, hidden_size],stddev=0.1))
+        self.b_h = tf.Variable(tf.random_normal([1, hidden_size],stddev=0.1))
+        """
 
 
         for i in range(self.args.seq_len):
@@ -287,37 +264,28 @@ class DeepIRTModel(object):
 
             # Prediction
             pred_z_value = 3.0 * student_ability - question_difficulty - skill_difficulty
-            """
-            # output, state = self.rnn_cell(tmp, state)
-            # q,hを入力とし、Wq+Wh+bを計算する
-            zt = tf.matmul(q, self.W_x) + tf.matmul(self.h_t, self.W_h) + self.b_h
-            output = tf.matmul(zt, self.W_out) + self.b_out
-            # tanhを適用する
-            output = tf.nn.tanh(output)
-            # h_tを更新する
-            self.h_t = tf.matmul(zt, self.W_h_) + self.b_h_
 
             """
-            #output = tf.matmul(q, self.W_x) + self.b_x
-            """
-            # 独自実装RMM
-            self.h_t = tf.tanh(tf.matmul(q, self.W_q)+ tf.matmul(self.h_t, self.W_h) + self.b_q)
-            output = tf.tanh(tf.matmul(self.h_t, self.W_o) + self.b_o)
-            """
-            """
-            # rnn_cellにランダムな値を入力する
-            #output, state = self.rnn_cell(q, state)
-            output, state = self.rnn_cell(tf.random_normal([self.args.batch_size, 50]), state)
+            # ここから提案の処理
+            c = tf.matmul(s, self.W_cq) + tf.matmul(self.h, self.W_ch) + self.b_c
+            c = tf.nn.tanh(c)
+            output = 3 *layers.fully_connected(
+                inputs=c,
+                num_outputs=1,
+                scope='output',
+                reuse=reuse_flag,
+                activation_fn=tf.nn.tanh,
+            )
 
-            output = tf.matmul(q, self.W_x) + self.b_x
-            output = tf.nn.relu(output)
-            output = tf.sigmoid(output)
-            #output = tf.matmul(output, self.weight) + self.bias
+            self.h =tf.nn.dropout(self.h, keep_prob=0.5)
+
+            self.h = tf.matmul(self.h, self.W_hh) + tf.matmul(rnn_input, self.W_hi) + self.b_h
+
+
             """
-            """"""
             self.h = layers.fully_connected(
-                inputs=tf.concat([q, self.h], axis=1),
-                num_outputs=50,
+                inputs=tf.concat([q,s, self.h], axis=1),
+                num_outputs=hidden_size,
                 scope='RNN_hiddennode',
                 reuse=reuse_flag,
                 activation_fn=tf.nn.tanh,
@@ -325,39 +293,22 @@ class DeepIRTModel(object):
             # dropout
             # self.h = tf.nn.dropout(self.h, 0.9)
 
-            output = layers.fully_connected(
+            output = 3*layers.fully_connected(
                 inputs=self.h,
                 num_outputs=1,
                 scope='RNN_output',
                 reuse=reuse_flag,
-                activation_fn=tf.nn.elu
+                activation_fn=tf.nn.tanh
             )
-
             self.h = layers.fully_connected(
                 inputs=tf.concat([rnn_input, self.h], axis=1),
-                num_outputs=50,
+                num_outputs=hidden_size,
                 scope='RNN_hidden_next',
                 reuse=reuse_flag,
                 activation_fn=tf.nn.tanh,
             )
 
-            """
-            rnn_hidden_size = int(self.args.retasu_message.split(",")[1])
-            self.rnn_cell = tf.contrib.rnn.BasicRNNCell(num_units=rnn_hidden_size)
 
-            self.rnn_cell = tf.contrib.rnn.DropoutWrapper(self.rnn_cell, output_keep_prob=0.95)
-
-            # state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-            state = self.rnn_cell.zero_state(self.args.batch_size, tf.float32)
-
-            self.weight = tf.Variable(tf.random_normal([rnn_hidden_size, 1]))
-            self.bias = tf.Variable(tf.random_normal([1]))
-
-            # output, state = self.rnn_cell(tmp, state)
-            output, state = self.rnn_cell(q, state)
-
-            output = tf.matmul(output, self.weight) + self.bias
-            """
 
 
 
