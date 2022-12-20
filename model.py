@@ -10,6 +10,7 @@ from utils import getLogger
 # Code reused from https://github.com/ckyeungac/DeepIRT.git
 # set logger
 logger = getLogger('Deep-IRT-model-HN')
+from tensorflow.contrib.layers import l1_regularizer
 
 
 def tensor_description(var):
@@ -283,23 +284,45 @@ class DeepIRTModel(object):
 
 
             """
+
+
+            bairitsu = layers.fully_connected(
+                inputs=q,
+                num_outputs=1,
+                scope='bairitsu',
+                reuse=reuse_flag,
+                activation_fn=tf.nn.sigmoid,
+            )
             self.h = layers.fully_connected(
-                inputs=tf.concat([q,s, self.h], axis=1),
+                inputs=tf.concat([q, self.h], axis=1),
                 num_outputs=hidden_size,
                 scope='RNN_hiddennode',
                 reuse=reuse_flag,
                 activation_fn=tf.nn.tanh,
+                weights_regularizer=l1_regularizer(0.01)
             )
             # dropout
-            # self.h = tf.nn.dropout(self.h, 0.9)
+            #self.h = tf.nn.dropout(self.h,0.5)
 
-            output = 3*layers.fully_connected(
+            output = bairitsu*layers.fully_connected(
                 inputs=self.h,
                 num_outputs=1,
                 scope='RNN_output',
                 reuse=reuse_flag,
                 activation_fn=tf.nn.tanh
             )
+
+            """
+            bairitsu = layers.fully_connected(
+                inputs=tf.concat([q, self.h], axis=1),
+                num_outputs=1,
+                scope='bairitsu',
+                reuse=reuse_flag,
+                activation_fn=tf.nn.tanh,
+            )
+            output = output * bairitsu
+            
+            """
             self.h = layers.fully_connected(
                 inputs=tf.concat([rnn_input, self.h], axis=1),
                 num_outputs=hidden_size,
