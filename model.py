@@ -285,7 +285,7 @@ class DeepIRTModel(object):
 
             """
 
-
+            """
             bairitsu = layers.fully_connected(
                 inputs=q,
                 num_outputs=1,
@@ -293,6 +293,7 @@ class DeepIRTModel(object):
                 reuse=reuse_flag,
                 activation_fn=tf.nn.sigmoid,
             )
+            """
             self.h = layers.fully_connected(
                 inputs=tf.concat([q, self.h], axis=1),
                 num_outputs=hidden_size,
@@ -303,6 +304,8 @@ class DeepIRTModel(object):
             )
             # dropout
             #self.h = tf.nn.dropout(self.h,0.5)
+            bairitsu = 0.2
+            bairitsu = self.args.bairitsu
 
             output = bairitsu*layers.fully_connected(
                 inputs=self.h,

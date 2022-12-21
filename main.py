@@ -64,6 +64,7 @@ parser.add_argument('--num_pattern', type=int, default=None)
 parser.add_argument('--gpu_num', type=str, default="1,0")
 parser.add_argument('--retasu_message', type=str, default="")
 parser.add_argument('--AT', type=bool, default=False)
+parser.add_argument('--bairitsu', type=float, default=1.0)
 
 _args = parser.parse_args()
 args = ModelConfigFactory.create_model_config(_args)
