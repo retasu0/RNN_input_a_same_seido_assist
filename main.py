@@ -198,7 +198,8 @@ def train_skill(model, train_q_data, train_qa_data, valid_q_data, valid_qa_data,
             'valid_auc', 'valid_accuracy', 'valid_loss'
         )
         f.write(result_msg)
-    for epoch in range(args.n_epochs):
+    #for epoch in range(args.n_epochs):
+    for epoch in range(1):
 
         train_loss, train_accuracy, train_auc, train_f1_score, train_ability, train_difficult, train_Diff, train_precision, train_recall, train_label_batch, train_all_pred, all_ability_train, pred_list_train, all_difficulties_train = run_model_skill(
             model, args, train_q_data, train_qa_data, mode='train'
@@ -296,7 +297,7 @@ def cross_validation():
         os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     aucs, accs, losses, f1_scores1, f1_scores2, pre1s, pre2s, rec1s, rec2s = list(), list(), list(), list(), list(), list(), list(), list(), list()
-    for i in range(5):
+    for i in range(1):
         tf.reset_default_graph()
         logger.info("Cross Validation {}".format(i + 1))
         result_csv_path = os.path.join(args.result_log_dir, 'fold-{}-result'.format(i + 1) + '.csv')

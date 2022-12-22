@@ -63,10 +63,10 @@ class DataLoader():
                                 s_value = int(s_tag_list[i])
                                 if 'assist2017_akt' in path:
                                     qa_value = q_item_value + a_value * self.n_skills
-                                    rnn_input_value = s_value + a_value * self.n_questions
+                                    rnn_input_value = a_value * self.n_questions
                                 else:
                                     qa_value = s_value + a_value * self.n_skills
-                                    rnn_input_value = q_item_value + a_value * self.n_questions
+                                    rnn_input_value = a_value * self.n_questions
                                 s_container.append(s_value)
                                 q_item_container.append(q_item_value)
                                 qa_container.append(qa_value)

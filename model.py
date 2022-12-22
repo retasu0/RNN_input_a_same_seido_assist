@@ -106,7 +106,7 @@ class DeepIRTModel(object):
                 initializer=tf.truncated_normal_initializer(stddev=0.1)
             )
             rnn_input_embed_matrix = tf.get_variable(
-                'rnn_input_embed', [2*self.args.n_questions + 1, self.args.key_memory_state_dim],
+                'rnn_input_embed', [self.args.n_questions + 1, self.args.key_memory_state_dim],
                 initializer=tf.truncated_normal_initializer(stddev=0.1)
             )
 
@@ -304,8 +304,8 @@ class DeepIRTModel(object):
             )
             # dropout
             #self.h = tf.nn.dropout(self.h,0.5)
-            bairitsu = 0.2
-            bairitsu = self.args.bairitsu
+            bairitsu = 0.5
+            #bairitsu = self.args.bairitsu
 
             output = bairitsu*layers.fully_connected(
                 inputs=self.h,
