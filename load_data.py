@@ -64,9 +64,11 @@ class DataLoader():
                                 if 'assist2017_akt' in path:
                                     qa_value = q_item_value + a_value * self.n_skills
                                     rnn_input_value = a_value * self.n_questions
+                                    rnn_input_value = a_value * q_item_value
                                 else:
                                     qa_value = s_value + a_value * self.n_skills
                                     rnn_input_value = a_value * self.n_questions
+                                    rnn_input_value = a_value * s_value
                                 s_container.append(s_value)
                                 q_item_container.append(q_item_value)
                                 qa_container.append(qa_value)

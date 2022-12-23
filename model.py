@@ -312,7 +312,8 @@ class DeepIRTModel(object):
                 num_outputs=1,
                 scope='RNN_output',
                 reuse=reuse_flag,
-                activation_fn=tf.nn.tanh
+                activation_fn=tf.nn.tanh,
+                #activation_fn=tf.nn.sigmoid,
             )
 
             """
