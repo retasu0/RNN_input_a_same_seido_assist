@@ -34,7 +34,7 @@ parser.add_argument('--dataset', default='assist2009_akt', )
 parser.add_argument('--mode', type=str, default='both')
 parser.add_argument('--save', type=bool, default=True)
 parser.add_argument('--cpu', type=bool, default=False)
-parser.add_argument('--n_epochs', type=int, default=50)
+parser.add_argument('--n_epochs', type=int, default=30)
 parser.add_argument('--batch_size', type=int, default=None)
 parser.add_argument('--train', type=bool, default=None)
 parser.add_argument('--show', type=bool, default=None)
@@ -99,7 +99,7 @@ def train(model, train_q_data, train_s_data, train_qa_data, valid_q_data, valid_
         valid_loss, valid_accuracy, valid_auc, valid_f1_score, valid_ability, valid_difficult, valid_skill_difficult, valid_Diff, valid_precision, valid_recall, valid_label_batch, valid_all_pred, all_ability_valid, pred_list_valid, all_difficulties_valid, all_skill_difficulties_valid,all_rmm_output_list = run_model(
             model, args, valid_s_data, valid_q_data, valid_qa_data,valid_rnn_input, mode='valid'
         )
-        test_loss, test_accuracy, test_auc, test_f1_score, test_ability, test_difficult, test_skill_difficult, test_Diff, test_precision, test_recall, test_label_batch, test_all_pred, all_ability_test, pred_list_test, all_difficulties_test, all_skill_difficulties_test,all_rmm_output_list = run_model(
+        test_loss, test_accuracy, test_auc, test_f1_score, test_ability, test_difficult, test_skill_difficult, test_Diff, test_precision, test_recall, test_label_batch, test_all_pred, all_ability_test, pred_list_test, all_difficulties_test, all_skill_difficulties_test,_ = run_model(
             model, args, test_s_data, test_q_data, test_qa_data,test_rnn_input, mode='valid'
         )
 
