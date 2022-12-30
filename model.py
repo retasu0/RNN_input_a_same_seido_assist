@@ -252,7 +252,7 @@ class DeepIRTModel(object):
                 num_outputs=self.args.summary_vector_output_dim,
                 scope='QuestionskillDifficultyOutputLayer1',
                 reuse=reuse_flag,
-                activation_fn=tf.nn.tanh
+                activation_fn=tf.nn.sigmoid
             )
 
             skill_difficulty = layers.fully_connected(
