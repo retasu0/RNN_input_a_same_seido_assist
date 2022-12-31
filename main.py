@@ -199,7 +199,7 @@ def train_skill(model, train_q_data, train_qa_data, valid_q_data, valid_qa_data,
         )
         f.write(result_msg)
     #for epoch in range(args.n_epochs):
-    for epoch in range(1):
+    for epoch in range(5):
 
         train_loss, train_accuracy, train_auc, train_f1_score, train_ability, train_difficult, train_Diff, train_precision, train_recall, train_label_batch, train_all_pred, all_ability_train, pred_list_train, all_difficulties_train = run_model_skill(
             model, args, train_q_data, train_qa_data, mode='train'
