@@ -162,7 +162,8 @@ class DeepIRTModel(object):
         # 手作業で作ったバージョン
 
         # hidden_size×hidden_sizeの重み行列
-        self.h = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size],stddev=0.1))
+        #self.h = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size],stddev=0.1))
+        pre_h = tf.Variable(tf.random_normal([self.args.batch_size, hidden_size],stddev=0.1))
         """
 
         # W_cq,W_ch,b_c
@@ -294,8 +295,8 @@ class DeepIRTModel(object):
                 activation_fn=tf.nn.sigmoid,
             )
             """
-            self.h = layers.fully_connected(
-                inputs=tf.concat([q, self.h], axis=1),
+            c = layers.fully_connected(
+                inputs=tf.concat([q, pre_h], axis=1),
                 num_outputs=hidden_size,
                 scope='RNN_hiddennode',
                 reuse=reuse_flag,
@@ -308,7 +309,7 @@ class DeepIRTModel(object):
             #bairitsu = self.args.bairitsu
 
             output = bairitsu*layers.fully_connected(
-                inputs=self.h,
+                inputs=c,
                 num_outputs=1,
                 scope='RNN_output',
                 reuse=reuse_flag,
@@ -327,14 +328,15 @@ class DeepIRTModel(object):
             output = output * bairitsu
             
             """
-            self.h = layers.fully_connected(
-                inputs=tf.concat([rnn_input, self.h], axis=1),
+            next_h = layers.fully_connected(
+                inputs=tf.concat([rnn_input, c], axis=1),
                 num_outputs=hidden_size,
                 scope='RNN_hidden_next',
                 reuse=reuse_flag,
                 activation_fn=tf.nn.tanh,
             )
 
+            pre_h = next_h
 
 
 
